@@ -35,6 +35,8 @@ void func_80A4DAD0(EnGoroiwa* this, GlobalContext* globalCtx);
 void func_80A4DB90(EnGoroiwa* this);
 void func_80A4DC00(EnGoroiwa* this, GlobalContext* globalCtx);
 
+void EnGoroiwa_Home(EnGoroiwa* this, GlobalContext* globalCtx);
+
 const ActorInit En_Goroiwa_InitVars = {
     ACTOR_EN_GOROIWA,
     ACTORTYPE_PROP,
@@ -555,7 +557,8 @@ void EnGoroiwa_Destroy(Actor* thisx, GlobalContext* globalCtx) {
 }
 
 void func_80A4D5E0(EnGoroiwa* this) {
-    this->actionFunc = func_80A4D624;
+    // this->actionFunc = func_80A4D624;
+    this->actionFunc = EnGoroiwa_Home;
     func_80A4BD70(this, 3);
     this->unk_1C0 = 1.0f;
 }
@@ -705,6 +708,47 @@ void func_80A4DC00(EnGoroiwa* this, GlobalContext* globalCtx) {
         this->unk_1D3 &= ~8;
         this->actor.speedXZ = 0.0f;
     }
+}
+
+// Derived from func_80A4D624
+// BUG: Boulder rolls through walls when colliding with Player
+void EnGoroiwa_Home(EnGoroiwa* this, GlobalContext* globalCtx) {
+    static EnGoroiwaUnkFunc2 D_80A4DF20[] = { func_80A4D9DC, func_80A4D8CC };
+
+    Player* player = PLAYER;
+    f32 targetY;
+    s16 temp_v1;
+
+    if (this->collider.base.atFlags & 2) {
+        this->collider.base.atFlags &= ~2;
+        this->unk_1D3 &= ~4;
+        temp_v1 = this->actor.yawTowardsLink - this->actor.posRot.rot.y;
+        if (temp_v1 >= -0x3FFF && temp_v1 < 0x4000) {
+            this->unk_1D3 |= 4;
+            if ((this->actor.params >> 10) & 1 || (this->actor.initPosRot.rot.z & 1) != 1) {
+                func_80A4C164(this);
+                func_80A4BE54(this, globalCtx);
+            }
+        }
+        func_8002F6D4(globalCtx, &this->actor, 2.0f, this->actor.yawTowardsLink, 0.0f, 0);
+        D_80A4DF20[(this->actor.params >> 10) & 1](this);
+        func_8002F7DC(&player->actor, NA_SE_PL_BODY_HIT);
+        if ((this->actor.initPosRot.rot.z & 1) == 1) {
+            // this->collisionTimer = 50;
+            this->collisionTimer = 0;
+        }
+    } else {
+        Math_ApproxF(&this->actor.speedXZ, mREG(12) * 0.01f, 0.3f);
+        this->actor.posRot.rot.y = this->actor.yawTowardsLink;
+        func_8002D868(&this->actor);
+        Math_ApproxF(&this->actor.posRot.pos.x, player->actor.posRot.pos.x, fabsf(this->actor.velocity.x));
+        Math_ApproxF(&this->actor.posRot.pos.z, player->actor.posRot.pos.z, fabsf(this->actor.velocity.z));
+
+        // Step toward boulder ground if present. If not, step toward player y-coord.
+        targetY = (this->actor.groundY > -32000.0f) ? this->actor.groundY : player->actor.posRot.pos.y;
+        Math_ApproxF(&this->actor.posRot.pos.y, targetY, fabsf(this->actor.velocity.y));
+    }
+    Audio_PlayActorSound2(&this->actor, NA_SE_EV_BIGBALL_ROLL - SFX_FLAG);
 }
 
 void EnGoroiwa_Update(Actor* thisx, GlobalContext* globalCtx) {
