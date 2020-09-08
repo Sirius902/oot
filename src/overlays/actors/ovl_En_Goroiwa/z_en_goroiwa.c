@@ -36,6 +36,7 @@ void func_80A4DB90(EnGoroiwa* this);
 void func_80A4DC00(EnGoroiwa* this, GlobalContext* globalCtx);
 
 void EnGoroiwa_Home(EnGoroiwa* this, GlobalContext* globalCtx);
+void EnGoroiwa_MoveY(EnGoroiwa* this, GlobalContext* globalCtx);
 
 const ActorInit En_Goroiwa_InitVars = {
     ACTOR_EN_GOROIWA,
@@ -295,7 +296,8 @@ bool func_80A4C6C8(EnGoroiwa* this, GlobalContext* globalCtx) {
     pointPos = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->waypoint2;
     result = Math_ApproxF(&this->actor.posRot.pos.x, pointPos->x, fabsf(this->actor.velocity.x)) & 1;
     result &= Math_ApproxF(&this->actor.posRot.pos.z, pointPos->z, fabsf(this->actor.velocity.z));
-    this->actor.posRot.pos.y += this->actor.velocity.y;
+    // this->actor.posRot.pos.y += this->actor.velocity.y;
+    EnGoroiwa_MoveY(this, globalCtx);
     return result;
 }
 
@@ -364,7 +366,8 @@ bool func_80A4CB78(EnGoroiwa* this, GlobalContext* globalCtx) {
     this->actor.posRot.pos.z = pointPos->z;
     thisY = this->actor.posRot.pos.y;
     if (1) {}
-    this->actor.posRot.pos.y += this->actor.velocity.y;
+    // this->actor.posRot.pos.y += this->actor.velocity.y;
+    EnGoroiwa_MoveY(this, globalCtx);
     if (this->actor.velocity.y < 0.0f && this->actor.posRot.pos.y <= pointY) {
         if (this->unk_1C6 == 0) {
             if (this->actor.xzDistFromLink < 600.0f) {
@@ -710,8 +713,20 @@ void func_80A4DC00(EnGoroiwa* this, GlobalContext* globalCtx) {
     }
 }
 
+// Step toward boulder ground if present. If not, step toward player y-coord.
+void EnGoroiwa_MoveY(EnGoroiwa* this, GlobalContext* globalCtx) {
+    Player* player = PLAYER;
+    f32 targetY;
+
+    if (this->actor.velocity.y < 0.0f) {
+        targetY = (this->actor.groundY > -32000.0f) ? this->actor.groundY : player->actor.posRot.pos.y;
+        Math_ApproxF(&this->actor.posRot.pos.y, targetY, fabsf(this->actor.velocity.y));
+    } else {
+        this->actor.posRot.pos.y += this->actor.velocity.y;
+    }
+}
+
 // Derived from func_80A4D624
-// BUG: Boulder rolls through walls when colliding with Player
 void EnGoroiwa_Home(EnGoroiwa* this, GlobalContext* globalCtx) {
     static EnGoroiwaUnkFunc2 D_80A4DF20[] = { func_80A4D9DC, func_80A4D8CC };
 
@@ -744,9 +759,7 @@ void EnGoroiwa_Home(EnGoroiwa* this, GlobalContext* globalCtx) {
         Math_ApproxF(&this->actor.posRot.pos.x, player->actor.posRot.pos.x, fabsf(this->actor.velocity.x));
         Math_ApproxF(&this->actor.posRot.pos.z, player->actor.posRot.pos.z, fabsf(this->actor.velocity.z));
 
-        // Step toward boulder ground if present. If not, step toward player y-coord.
-        targetY = (this->actor.groundY > -32000.0f) ? this->actor.groundY : player->actor.posRot.pos.y;
-        Math_ApproxF(&this->actor.posRot.pos.y, targetY, fabsf(this->actor.velocity.y));
+        EnGoroiwa_MoveY(this, globalCtx);
     }
     Audio_PlayActorSound2(&this->actor, NA_SE_EV_BIGBALL_ROLL - SFX_FLAG);
 }
