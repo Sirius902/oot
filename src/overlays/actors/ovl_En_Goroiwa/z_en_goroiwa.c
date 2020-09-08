@@ -727,6 +727,7 @@ void EnGoroiwa_MoveY(EnGoroiwa* this, GlobalContext* globalCtx) {
 }
 
 // Derived from func_80A4D624
+// BUG: Collision OoB causes boulder to recoil infinitely
 void EnGoroiwa_Home(EnGoroiwa* this, GlobalContext* globalCtx) {
     static EnGoroiwaUnkFunc2 D_80A4DF20[] = { func_80A4D9DC, func_80A4D8CC };
 
