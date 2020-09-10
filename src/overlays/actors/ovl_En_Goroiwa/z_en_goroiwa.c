@@ -12,7 +12,7 @@
 
 #define THIS ((EnGoroiwa*)thisx)
 
-typedef bool (*EnGoroiwaUnkFunc1)(EnGoroiwa* this, GlobalContext* globalCtx);
+typedef s32 (*EnGoroiwaUnkFunc1)(EnGoroiwa* this, GlobalContext* globalCtx);
 typedef void (*EnGoroiwaUnkFunc2)(EnGoroiwa* this);
 
 void EnGoroiwa_Init(Actor* thisx, GlobalContext* globalCtx);
@@ -20,13 +20,9 @@ void EnGoroiwa_Destroy(Actor* thisx, GlobalContext* globalCtx);
 void EnGoroiwa_Update(Actor* thisx, GlobalContext* globalCtx);
 void EnGoroiwa_Draw(Actor* thisx, GlobalContext* globalCtx);
 
-bool func_80A4C814(EnGoroiwa* this, GlobalContext* globalCtx);
-bool func_80A4C6C8(EnGoroiwa* this, GlobalContext* globalCtx);
-void func_80A4D9DC(EnGoroiwa* this);
-void func_80A4D8CC(EnGoroiwa* this);
-
 void func_80A4D5E0(EnGoroiwa* this);
 void func_80A4D624(EnGoroiwa* this, GlobalContext* globalCtx);
+void func_80A4D8CC(EnGoroiwa* this);
 void func_80A4D944(EnGoroiwa* this, GlobalContext* globalCtx);
 void func_80A4D9DC(EnGoroiwa* this);
 void func_80A4DA3C(EnGoroiwa* this, GlobalContext* globalCtx);
@@ -72,12 +68,12 @@ extern Gfx D_0400D340[];
 extern Gfx D_060006B0[];
 
 void func_80A4BCA0(EnGoroiwa* this) {
-    static f32 D_80A4DEC4[] = { 0.0f, 59.5f };
+    static f32 colliderHeightOffset[] = { 0.0f, 59.5f };
 
-    Sphere16* worldSphere = &this->collider.list->dim.worldSphere;
+    Sphere16* worldSphere = &this->collider.list[0].dim.worldSphere;
 
     worldSphere->center.x = this->actor.posRot.pos.x;
-    worldSphere->center.y = D_80A4DEC4[(this->actor.params >> 10) & 1] + this->actor.posRot.pos.y;
+    worldSphere->center.y = this->actor.posRot.pos.y + colliderHeightOffset[(this->actor.params >> 10) & 1];
     worldSphere->center.z = this->actor.posRot.pos.z;
 }
 
@@ -87,7 +83,7 @@ void func_80A4BD04(EnGoroiwa* this, GlobalContext* globalCtx) {
     Collider_InitJntSph(globalCtx, &this->collider);
     Collider_SetJntSph(globalCtx, &this->collider, &this->actor, &sJntSphInit, &this->colliderItem);
     func_80A4BCA0(this);
-    this->collider.list->dim.worldSphere.radius = 0x3A;
+    this->collider.list[0].dim.worldSphere.radius = 58;
 }
 
 void func_80A4BD70(EnGoroiwa* this, u8 arg1) {
@@ -95,8 +91,8 @@ void func_80A4BD70(EnGoroiwa* this, u8 arg1) {
     this->unk_1D3 |= arg1;
 }
 
-bool func_80A4BD8C(Vec3f* arg0, Vec3f* arg1) {
-    f32 magnitude = Math3D_Vec3fMagnitude(arg1);
+s32 EnGoroiwa_Vec3fNormalize(Vec3f* ret, Vec3f* a) {
+    f32 magnitude = Math3D_Vec3fMagnitude(a);
     f32 scale;
 
     if (magnitude < 0.001f) {
@@ -105,108 +101,106 @@ bool func_80A4BD8C(Vec3f* arg0, Vec3f* arg1) {
 
     scale = 1.0f / magnitude;
 
-    arg0->x = arg1->x * scale;
-    arg0->y = arg1->y * scale;
-    arg0->z = arg1->z * scale;
+    ret->x = a->x * scale;
+    ret->y = a->y * scale;
+    ret->z = a->z * scale;
 
     return true;
 }
 
-void func_80A4BE10(EnGoroiwa* this, GlobalContext* globalCtx) {
+void EnGoroiwa_SetSpeed(EnGoroiwa* this, GlobalContext* globalCtx) {
     if (globalCtx->sceneNum == SCENE_SPOT04) {
-        this->unk_1D2 = 1;
+        this->isInKokiri = true;
         mREG(12) = 920;
     } else {
-        this->unk_1D2 = 0;
+        this->isInKokiri = false;
         mREG(12) = 1000;
     }
 }
 
 void func_80A4BE54(EnGoroiwa* this, GlobalContext* globalCtx) {
     Path* path = &globalCtx->setupPathList[this->actor.params & 0xFF];
-    Vec3s* pointPos = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->waypoint2;
-    Vec3f pos;
+    Vec3s* nextPos = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->nextWaypoint;
+    Vec3f nextPosF;
 
-    pos.x = pointPos->x;
-    pos.y = pointPos->y;
-    pos.z = pointPos->z;
+    nextPosF.x = nextPos->x;
+    nextPosF.y = nextPos->y;
+    nextPosF.z = nextPos->z;
 
-    this->actor.posRot.rot.y = Math_Vec3f_Yaw(&this->actor.posRot.pos, &pos);
+    this->actor.posRot.rot.y = Math_Vec3f_Yaw(&this->actor.posRot.pos, &nextPosF);
 }
 
 void func_80A4BF28(EnGoroiwa* this, GlobalContext* globalCtx, Vec3f* arg2) {
     s16 temp_v0 = (this->actor.params >> 8) & 3;
     Path* path = &globalCtx->setupPathList[this->actor.params & 0xFF];
-    s16 temp_t0 = this->waypoint1 - this->unk_1D0;
+    s16 temp_t0 = this->currentWaypoint - this->pathDirection;
     Vec3s* pointPos;
-    Vec3s* pointPos1;
+    Vec3s* currentPointPos;
 
     if (temp_t0 < 0) {
         if (temp_v0 == 0 || temp_v0 == 1) {
-            temp_t0 = this->unk_1CA;
+            temp_t0 = this->endWaypoint;
         } else if (temp_v0 == 3) {
             temp_t0 = 1;
         }
-    } else {
-        if (this->unk_1CA < temp_t0) {
-            if (temp_v0 == 0 || temp_v0 == 1) {
-                temp_t0 = 0;
-            } else if (temp_v0 == 3) {
-                temp_t0 = this->unk_1CA - 1;
-            }
+    } else if (this->endWaypoint < temp_t0) {
+        if (temp_v0 == 0 || temp_v0 == 1) {
+            temp_t0 = 0;
+        } else if (temp_v0 == 3) {
+            temp_t0 = this->endWaypoint - 1;
         }
     }
 
-    pointPos1 = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->waypoint1;
+    currentPointPos = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->currentWaypoint;
     pointPos = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + temp_t0;
-    arg2->x = pointPos1->x - pointPos->x;
-    arg2->y = pointPos1->x - pointPos->y;
-    arg2->z = pointPos1->x - pointPos->z;
+    arg2->x = currentPointPos->x - pointPos->x;
+    arg2->y = currentPointPos->x - pointPos->y;
+    arg2->z = currentPointPos->x - pointPos->z;
 }
 
 void func_80A4C080(EnGoroiwa* this) {
     s16 temp_v0 = (this->actor.params >> 8) & 3;
 
-    if (this->waypoint2 < 0) {
+    if (this->nextWaypoint < 0) {
         if (temp_v0 == 0 || temp_v0 == 1) {
-            this->waypoint1 = this->unk_1CA;
-            this->waypoint2 = this->unk_1CA - 1;
-            this->unk_1D0 = -1;
+            this->currentWaypoint = this->endWaypoint;
+            this->nextWaypoint = this->endWaypoint - 1;
+            this->pathDirection = -1;
         } else if (temp_v0 == 3) {
-            this->waypoint1 = 0;
-            this->waypoint2 = 1;
-            this->unk_1D0 = 1;
+            this->currentWaypoint = 0;
+            this->nextWaypoint = 1;
+            this->pathDirection = 1;
         }
-    } else if (this->waypoint2 > this->unk_1CA) {
+    } else if (this->nextWaypoint > this->endWaypoint) {
         if (temp_v0 == 0 || temp_v0 == 1) {
-            this->waypoint1 = 0;
-            this->waypoint2 = 1;
-            this->unk_1D0 = 1;
+            this->currentWaypoint = 0;
+            this->nextWaypoint = 1;
+            this->pathDirection = 1;
         } else if (temp_v0 == 3) {
-            this->waypoint1 = this->unk_1CA;
-            this->waypoint2 = this->unk_1CA - 1;
-            this->unk_1D0 = -1;
+            this->currentWaypoint = this->endWaypoint;
+            this->nextWaypoint = this->endWaypoint - 1;
+            this->pathDirection = -1;
         }
     }
 }
 
 void func_80A4C134(EnGoroiwa* this) {
-    this->waypoint1 = this->waypoint2;
-    this->waypoint2 += this->unk_1D0;
+    this->currentWaypoint = this->nextWaypoint;
+    this->nextWaypoint += this->pathDirection;
     func_80A4C080(this);
 }
 
 void func_80A4C164(EnGoroiwa* this) {
-    this->unk_1D0 *= -1;
-    this->waypoint1 = this->waypoint2;
-    this->waypoint2 += this->unk_1D0;
+    this->pathDirection *= -1;
+    this->currentWaypoint = this->nextWaypoint;
+    this->nextWaypoint += this->pathDirection;
 }
 
 void func_80A4C188(EnGoroiwa* this, GlobalContext* globalCtx) {
-    this->unk_1CA = globalCtx->setupPathList[this->actor.params & 0xFF].count - 1;
-    this->waypoint1 = 0;
-    this->waypoint2 = 1;
-    this->unk_1D0 = 1;
+    this->endWaypoint = globalCtx->setupPathList[this->actor.params & 0xFF].count - 1;
+    this->currentWaypoint = 0;
+    this->nextWaypoint = 1;
+    this->pathDirection = 1;
 }
 
 void func_80A4C1C4(EnGoroiwa* this, GlobalContext* globalCtx, s32 waypoint) {
@@ -226,17 +220,17 @@ void func_80A4C264(EnGoroiwa* this) {
 s32 func_80A4C27C(EnGoroiwa* this, GlobalContext* globalCtx) {
     s32 pad;
     Path* path = &globalCtx->setupPathList[this->actor.params & 0xFF];
-    Vec3s* pointPos2 = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->waypoint2;
-    Vec3s* pointPos1 = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->waypoint1;
+    Vec3s* nextPointPos = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->nextWaypoint;
+    Vec3s* currentPointPos = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->currentWaypoint;
 
-    if (pointPos2->x == pointPos1->x && pointPos2->z == pointPos1->z) {
-        if (pointPos2->y == pointPos1->y) {
+    if (nextPointPos->x == currentPointPos->x && nextPointPos->z == currentPointPos->z) {
+        if (nextPointPos->y == currentPointPos->y) {
             // Translation: Error: Invalid path data (points overlap)
             osSyncPrintf("Error : レールデータ不正(点が重なっている)");
             osSyncPrintf("(%s %d)(arg_data 0x%04x)\n", "../z_en_gr.c", 559, this->actor.params);
         }
 
-        if (pointPos2->y > pointPos1->y) {
+        if (nextPointPos->y > currentPointPos->y) {
             return 1;
         } else {
             return -1;
@@ -256,9 +250,9 @@ void func_80A4C3A4(GlobalContext* globalCtx, Vec3f* arg1) {
 
     for (i = 0; i < 8; i++) {
         angle += 0x4E20;
-        effectPos.x = ((47.0f * ((Math_Rand_ZeroOne() * 0.5f) + 0.5f)) * Math_Sins(angle)) + arg1->x;
-        effectPos.y = ((Math_Rand_ZeroOne() - 0.5f) * 40.0f) + arg1->y;
-        effectPos.z = ((47.0f * ((Math_Rand_ZeroOne() * 0.5f) + 0.5f))) * Math_Coss(angle) + arg1->z;
+        effectPos.x = arg1->x + ((47.0f * ((Math_Rand_ZeroOne() * 0.5f) + 0.5f)) * Math_Sins(angle));
+        effectPos.y = arg1->y + ((Math_Rand_ZeroOne() - 0.5f) * 40.0f);
+        effectPos.z = arg1->z + ((47.0f * ((Math_Rand_ZeroOne() * 0.5f) + 0.5f))) * Math_Coss(angle);
         func_800286CC(globalCtx, &effectPos, &effectVelocity, &effectAccel, (s16)(Math_Rand_ZeroOne() * 30.0f) + 100,
                       80);
         func_800286CC(globalCtx, &effectPos, &effectVelocity, &effectAccel, (s16)(Math_Rand_ZeroOne() * 20.0f) + 80,
@@ -273,9 +267,9 @@ void func_80A4C594(GlobalContext* globalCtx, Vec3f* arg1) {
 
     for (i = 0; i < 11; i++) {
         angle += 0x1746;
-        sp4C.x = (Math_Sins(angle) * 55.0f) + arg1->x;
+        sp4C.x = arg1->x + (Math_Sins(angle) * 55.0f);
         sp4C.y = arg1->y;
-        sp4C.z = (Math_Coss(angle) * 55.0f) + arg1->z;
+        sp4C.z = arg1->z + (Math_Coss(angle) * 55.0f);
         func_8002949C(globalCtx, &sp4C, 0, 0, 0, 350);
     }
 
@@ -284,69 +278,69 @@ void func_80A4C594(GlobalContext* globalCtx, Vec3f* arg1) {
     func_80029444(globalCtx, arg1, 500, 1300, 8);
 }
 
-bool func_80A4C6C8(EnGoroiwa* this, GlobalContext* globalCtx) {
+s32 func_80A4C6C8(EnGoroiwa* this, GlobalContext* globalCtx) {
     Path* path;
-    bool result;
+    s32 result;
     s32 pad;
-    Vec3s* pointPos;
+    Vec3s* nextPointPos;
 
     Math_ApproxF(&this->actor.speedXZ, mREG(12) * 0.01f, 0.3f);
     func_8002D868(&this->actor);
     path = &globalCtx->setupPathList[this->actor.params & 0xFF];
-    pointPos = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->waypoint2;
-    result = Math_ApproxF(&this->actor.posRot.pos.x, pointPos->x, fabsf(this->actor.velocity.x)) & 1;
-    result &= Math_ApproxF(&this->actor.posRot.pos.z, pointPos->z, fabsf(this->actor.velocity.z));
+    nextPointPos = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->nextWaypoint;
+    result = Math_ApproxF(&this->actor.posRot.pos.x, nextPointPos->x, fabsf(this->actor.velocity.x)) & 1;
+    result &= Math_ApproxF(&this->actor.posRot.pos.z, nextPointPos->z, fabsf(this->actor.velocity.z));
     // this->actor.posRot.pos.y += this->actor.velocity.y;
     EnGoroiwa_MoveY(this, globalCtx);
     return result;
 }
 
-bool func_80A4C814(EnGoroiwa* this, GlobalContext* globalCtx) {
+s32 func_80A4C814(EnGoroiwa* this, GlobalContext* globalCtx) {
     Path* path = &globalCtx->setupPathList[this->actor.params & 0xFF];
     s32 pad;
-    Vec3s* pointPos2 = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->waypoint2;
-    Vec3s* pointPos1 = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->waypoint1;
-    bool result;
-    Vec3f sp38;
-    Vec3f sp2C;
+    Vec3s* nextPointPos = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->nextWaypoint;
+    Vec3s* currentPointPos = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->currentWaypoint;
+    s32 result;
+    Vec3f posDiff;
+    Vec3f nextPointPosF;
 
-    sp2C.x = pointPos2->x;
-    sp2C.y = pointPos2->y;
-    sp2C.z = pointPos2->z;
+    nextPointPosF.x = nextPointPos->x;
+    nextPointPosF.y = nextPointPos->y;
+    nextPointPosF.z = nextPointPos->z;
     Math_ApproxF(&this->actor.speedXZ, mREG(12) * 0.01f, 0.3f);
-    if (Math3D_Vec3fDistSq(&sp2C, &this->actor.posRot.pos) < 25.0f) {
-        Math_Vec3f_Diff(&sp2C, &this->actor.posRot.pos, &sp38);
+    if (Math3D_Vec3fDistSq(&nextPointPosF, &this->actor.posRot.pos) < 25.0f) {
+        Math_Vec3f_Diff(&nextPointPosF, &this->actor.posRot.pos, &posDiff);
     } else {
-        sp38.x = sp2C.x - pointPos1->x;
-        sp38.y = sp2C.y - pointPos1->y;
-        sp38.z = sp2C.z - pointPos1->z;
+        posDiff.x = nextPointPosF.x - currentPointPos->x;
+        posDiff.y = nextPointPosF.y - currentPointPos->y;
+        posDiff.z = nextPointPosF.z - currentPointPos->z;
     }
-    func_80A4BD8C(&this->actor.velocity, &sp38);
+    EnGoroiwa_Vec3fNormalize(&this->actor.velocity, &posDiff);
     this->actor.velocity.x *= this->actor.speedXZ;
     this->actor.velocity.y *= this->actor.speedXZ;
     this->actor.velocity.z *= this->actor.speedXZ;
-    result = Math_ApproxF(&this->actor.posRot.pos.x, sp2C.x, fabsf(this->actor.velocity.x)) & 1;
-    result &= Math_ApproxF(&this->actor.posRot.pos.y, sp2C.y, fabsf(this->actor.velocity.y));
-    result &= Math_ApproxF(&this->actor.posRot.pos.z, sp2C.z, fabsf(this->actor.velocity.z));
+    result = Math_ApproxF(&this->actor.posRot.pos.x, nextPointPosF.x, fabsf(this->actor.velocity.x)) & 1;
+    result &= Math_ApproxF(&this->actor.posRot.pos.y, nextPointPosF.y, fabsf(this->actor.velocity.y));
+    result &= Math_ApproxF(&this->actor.posRot.pos.z, nextPointPosF.z, fabsf(this->actor.velocity.z));
     return result;
 }
 
-bool func_80A4CA50(EnGoroiwa* this, GlobalContext* globalCtx) {
+s32 func_80A4CA50(EnGoroiwa* this, GlobalContext* globalCtx) {
     s32 pad;
     Path* path = &globalCtx->setupPathList[this->actor.params & 0xFF];
-    Vec3s* pointPos = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->waypoint2;
+    Vec3s* nextPointPos = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->nextWaypoint;
 
     Math_ApproxF(&this->actor.velocity.y, (mREG(12) * 0.01f) * 0.5f, 0.18f);
-    this->actor.posRot.pos.x = pointPos->x;
-    this->actor.posRot.pos.z = pointPos->z;
-    return Math_ApproxF(&this->actor.posRot.pos.y, pointPos->y, fabsf(this->actor.velocity.y));
+    this->actor.posRot.pos.x = nextPointPos->x;
+    this->actor.posRot.pos.z = nextPointPos->z;
+    return Math_ApproxF(&this->actor.posRot.pos.y, nextPointPos->y, fabsf(this->actor.velocity.y));
 }
 
-bool func_80A4CB78(EnGoroiwa* this, GlobalContext* globalCtx) {
+s32 func_80A4CB78(EnGoroiwa* this, GlobalContext* globalCtx) {
     s32 pad;
     Path* path = &globalCtx->setupPathList[this->actor.params & 0xFF];
-    Vec3s* pointPos = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->waypoint2;
-    f32 pointY;
+    Vec3s* nextPointPos = (Vec3s*)SEGMENTED_TO_VIRTUAL(path->points) + this->nextWaypoint;
+    f32 nextPointY;
     f32 thisY;
     f32 temp;
     s32 quakeIdx;
@@ -360,15 +354,15 @@ bool func_80A4CB78(EnGoroiwa* this, GlobalContext* globalCtx) {
     f32 ySurface;
     Vec3f sp30;
 
-    pointY = pointPos->y;
+    nextPointY = nextPointPos->y;
     Math_ApproxF(&this->actor.velocity.y, -14.0f, 1.0f);
-    this->actor.posRot.pos.x = pointPos->x;
-    this->actor.posRot.pos.z = pointPos->z;
+    this->actor.posRot.pos.x = nextPointPos->x;
+    this->actor.posRot.pos.z = nextPointPos->z;
     thisY = this->actor.posRot.pos.y;
     if (1) {}
     // this->actor.posRot.pos.y += this->actor.velocity.y;
     EnGoroiwa_MoveY(this, globalCtx);
-    if (this->actor.velocity.y < 0.0f && this->actor.posRot.pos.y <= pointY) {
+    if (this->actor.velocity.y < 0.0f && this->actor.posRot.pos.y <= nextPointY) {
         if (this->unk_1C6 == 0) {
             if (this->actor.xzDistFromLink < 600.0f) {
                 quakeIdx = Quake_Add(ACTIVE_CAM, 3);
@@ -397,7 +391,7 @@ bool func_80A4CB78(EnGoroiwa* this, GlobalContext* globalCtx) {
         }
         this->unk_1C6 += 1;
         this->actor.velocity.y *= -0.3f;
-        this->actor.posRot.pos.y = pointY - ((this->actor.posRot.pos.y - pointY) * 0.3f);
+        this->actor.posRot.pos.y = nextPointY - ((this->actor.posRot.pos.y - nextPointY) * 0.3f);
     }
     if (this->unk_1C6 == 0 &&
         func_80042244(globalCtx, &globalCtx->colCtx, this->actor.posRot.pos.x, this->actor.posRot.pos.z, &ySurface,
@@ -445,16 +439,16 @@ void func_80A4CED8(EnGoroiwa* this, GlobalContext* globalCtx) {
         Math3D_Vec3f_Cross(&unitY, &this->actor.velocity, temp);
     }
 
-    if (func_80A4BD8C(&sp74, temp)) {
+    if (EnGoroiwa_Vec3fNormalize(&sp74, temp)) {
         this->unk_1B0 = sp74;
     } else {
         sp74 = this->unk_1B0;
     }
 
     func_800D23FC(sp8C, &sp74, 0);
-    Matrix_RotateY(this->actor.shape.rot.y * (2 * M_PI / 65536), 1);
-    Matrix_RotateX(this->actor.shape.rot.x * (2 * M_PI / 65536), 1);
-    Matrix_RotateZ(this->actor.shape.rot.z * (2 * M_PI / 65536), 1);
+    Matrix_RotateY(this->actor.shape.rot.y * (2.0f * M_PI / 0x10000), 1);
+    Matrix_RotateX(this->actor.shape.rot.x * (2.0f * M_PI / 0x10000), 1);
+    Matrix_RotateZ(this->actor.shape.rot.z * (2.0f * M_PI / 0x10000), 1);
     Matrix_Get(&mtx);
     func_800D20CC(&mtx, &this->actor.shape.rot, 0);
 }
@@ -465,8 +459,8 @@ void func_80A4D074(EnGoroiwa* this, GlobalContext* globalCtx) {
     func_80A4C134(this);
 
     if (temp_v0 == 0 || temp_v0 == 1) {
-        if (this->waypoint1 == 0 || this->waypoint1 == this->unk_1CA) {
-            func_80A4C1C4(this, globalCtx, this->waypoint1);
+        if (this->currentWaypoint == 0 || this->currentWaypoint == this->endWaypoint) {
+            func_80A4C1C4(this, globalCtx, this->currentWaypoint);
         }
     }
 
@@ -474,7 +468,7 @@ void func_80A4D074(EnGoroiwa* this, GlobalContext* globalCtx) {
 }
 
 void func_80A4D0FC(EnGoroiwa* this, GlobalContext* globalCtx) {
-    static f32 D_80A4DEF0[] = { 0.0f, 59.5f };
+    static f32 colliderHeightOffset[] = { 0.0f, 59.5f };
 
     s16 angle1;
     s16 angle2;
@@ -492,10 +486,10 @@ void func_80A4D0FC(EnGoroiwa* this, GlobalContext* globalCtx) {
     for (i = 0, angle1 = 0; i < 16; i++, angle1 += 0x4E20) {
         temp_f22 = Math_Sins(angle1);
         temp_f24 = Math_Coss(angle1);
-        angle2 = Math_Rand_ZeroOne() * 65535.0f;
+        angle2 = Math_Rand_ZeroOne() * 0xFFFF;
         effectPos.x = ((Math_Rand_ZeroOne() * 50.0f) * temp_f22) * Math_Sins(angle2);
         temp_f20_2 = Math_Sins(angle2);
-        effectPos.y = (((Math_Rand_ZeroOne() - 0.5f) * 100.0f) * temp_f20_2) + D_80A4DEF0[temp_v0];
+        effectPos.y = (((Math_Rand_ZeroOne() - 0.5f) * 100.0f) * temp_f20_2) + colliderHeightOffset[temp_v0];
         effectPos.z = ((Math_Rand_ZeroOne() * 50.0f) * temp_f24) * Math_Sins(angle2);
         effectVelocity.x = effectPos.x * 0.2f;
         effectVelocity.y = (Math_Rand_ZeroOne() * 15.0f) + 2.0f;
@@ -506,7 +500,7 @@ void func_80A4D0FC(EnGoroiwa* this, GlobalContext* globalCtx) {
     }
 
     effectPos.x = thisPos->x;
-    effectPos.y = thisPos->y + D_80A4DEF0[temp_v0];
+    effectPos.y = thisPos->y + colliderHeightOffset[temp_v0];
     effectPos.z = thisPos->z;
     func_80033480(globalCtx, &effectPos, 80.0f, 5, 70, 110, 1);
     func_80033480(globalCtx, &effectPos, 90.0f, 5, 110, 160, 1);
@@ -522,19 +516,19 @@ void EnGoroiwa_Init(Actor* thisx, GlobalContext* globalCtx) {
     static f32 D_80A4DF10[] = { 0.0f, 595.0f };
 
     EnGoroiwa* this = THIS;
-    s32 params;
+    s32 pathIdx;
 
     Actor_ProcessInitChain(&this->actor, sInitChain);
     func_80A4BD04(this, globalCtx);
-    params = this->actor.params & 0xFF;
-    if (params == 0xFF) {
+    pathIdx = this->actor.params & 0xFF;
+    if (pathIdx == 0xFF) {
         // Translation: Error: Invalid arg_data
         osSyncPrintf("Ｅｒｒｏｒ : arg_data が不正(%s %d)(arg_data 0x%04x)\n", "../z_en_gr.c", 1033,
                      this->actor.params);
         Actor_Kill(&this->actor);
         return;
     }
-    if (globalCtx->setupPathList[params].count < 2) {
+    if (globalCtx->setupPathList[pathIdx].count < 2) {
         // Translation: Error: Invalid Path Data
         osSyncPrintf("Ｅｒｒｏｒ : レールデータ が不正(%s %d)\n", "../z_en_gr.c", 1043);
         Actor_Kill(&this->actor);
@@ -543,7 +537,7 @@ void EnGoroiwa_Init(Actor* thisx, GlobalContext* globalCtx) {
     func_80061ED4(&this->actor.colChkInfo, NULL, &sColChkInfoInit);
     ActorShape_Init(&this->actor.shape, D_80A4DF10[(this->actor.params >> 10) & 1], ActorShadow_DrawFunc_Circle, 9.4f);
     this->actor.shape.unk_14 = 200;
-    func_80A4BE10(this, globalCtx);
+    EnGoroiwa_SetSpeed(this, globalCtx);
     func_80A4C188(this, globalCtx);
     func_80A4C1C4(this, globalCtx, 0);
     func_80A4C264(this);
@@ -571,14 +565,14 @@ void func_80A4D624(EnGoroiwa* this, GlobalContext* globalCtx) {
     static EnGoroiwaUnkFunc2 D_80A4DF20[] = { func_80A4D9DC, func_80A4D8CC };
 
     s32 temp_v0_5;
-    s16 temp_v1;
+    s16 yawDiff;
     s16 temp_v1_2;
 
     if (this->collider.base.atFlags & 2) {
         this->collider.base.atFlags &= ~2;
         this->unk_1D3 &= ~4;
-        temp_v1 = this->actor.yawTowardsLink - this->actor.posRot.rot.y;
-        if (temp_v1 >= -0x3FFF && temp_v1 < 0x4000) {
+        yawDiff = this->actor.yawTowardsLink - this->actor.posRot.rot.y;
+        if (yawDiff >= -0x3FFF && yawDiff < 0x4000) {
             this->unk_1D3 |= 4;
             if ((this->actor.params >> 10) & 1 || (this->actor.initPosRot.rot.z & 1) != 1) {
                 func_80A4C164(this);
@@ -598,15 +592,16 @@ void func_80A4D624(EnGoroiwa* this, GlobalContext* globalCtx) {
     } else if (D_80A4DF18[(this->actor.params >> 10) & 1](this, globalCtx)) {
         temp_v1_2 = (this->actor.params >> 8) & 3;
         if (temp_v1_2 == 1) {
-            if (this->waypoint2 == 0 || this->waypoint2 == this->unk_1CA) {
+            if (this->nextWaypoint == 0 || this->nextWaypoint == this->endWaypoint) {
                 func_80A4D0FC(this, globalCtx);
             }
         }
         func_80A4D074(this, globalCtx);
-        if ((temp_v1_2 == 3) && (this->waypoint1 == 0 || this->waypoint1 == this->unk_1CA)) {
+        if ((temp_v1_2 == 3) && (this->currentWaypoint == 0 || this->currentWaypoint == this->endWaypoint)) {
             func_80A4D9DC(this);
         } else {
-            if (!((this->actor.params >> 10) & 1) && this->waypoint1 != 0 && this->waypoint1 != this->unk_1CA) {
+            if (!((this->actor.params >> 10) & 1) && this->currentWaypoint != 0 &&
+                this->currentWaypoint != this->endWaypoint) {
                 temp_v0_5 = func_80A4C27C(this, globalCtx);
                 if (temp_v0_5 > 0) {
                     func_80A4DA7C(this);
@@ -677,7 +672,6 @@ void func_80A4DAD0(EnGoroiwa* this, GlobalContext* globalCtx) {
         func_8002F7DC(&PLAYER->actor, NA_SE_PL_BODY_HIT);
         if ((this->actor.initPosRot.rot.z & 1) == 1) {
             this->collisionTimer = 50;
-            return;
         }
     } else if (func_80A4CA50(this, globalCtx)) {
         func_80A4D074(this, globalCtx);
@@ -770,21 +764,20 @@ void EnGoroiwa_Update(Actor* thisx, GlobalContext* globalCtx) {
     Player* player = PLAYER;
     s32 pad;
     UNK_TYPE sp30;
-    s32 temp_v0_2;
 
     if (!(player->stateFlags1 & 0x300000C0)) {
         if (this->collisionTimer > 0) {
             this->collisionTimer--;
         }
         this->actionFunc(this, globalCtx);
-        temp_v0_2 = (this->actor.params >> 10) & 1;
-        if (temp_v0_2 != 0) {
-            if (temp_v0_2 == 1) {
+        switch ((this->actor.params >> 10) & 1) {
+            case 1:
                 func_8002E4B4(globalCtx, &this->actor, 0.0f, 0.0f, 0.0f, 0x1C);
-            }
-        } else {
-            this->actor.groundY =
-                func_8003C9A4(&globalCtx->colCtx, &this->actor.floorPoly, &sp30, &this->actor, &this->actor.posRot.pos);
+                break;
+            case 0:
+                this->actor.groundY = func_8003C9A4(&globalCtx->colCtx, &this->actor.floorPoly, &sp30, &this->actor,
+                                                    &this->actor.posRot.pos);
+                break;
         }
         func_80A4CED8(this, globalCtx);
         if (this->actor.xzDistFromLink < 300.0f) {
