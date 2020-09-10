@@ -726,14 +726,13 @@ void EnGoroiwa_Home(EnGoroiwa* this, GlobalContext* globalCtx) {
     static EnGoroiwaUnkFunc2 D_80A4DF20[] = { func_80A4D9DC, func_80A4D8CC };
 
     Player* player = PLAYER;
-    f32 targetY;
-    s16 temp_v1;
+    s16 yawDiff;
 
     if (this->collider.base.atFlags & 2) {
         this->collider.base.atFlags &= ~2;
         this->unk_1D3 &= ~4;
-        temp_v1 = this->actor.yawTowardsLink - this->actor.posRot.rot.y;
-        if (temp_v1 >= -0x3FFF && temp_v1 < 0x4000) {
+        yawDiff = this->actor.yawTowardsLink - this->actor.posRot.rot.y;
+        if (yawDiff >= -0x3FFF && yawDiff < 0x4000) {
             this->unk_1D3 |= 4;
             if ((this->actor.params >> 10) & 1 || (this->actor.initPosRot.rot.z & 1) != 1) {
                 func_80A4C164(this);
