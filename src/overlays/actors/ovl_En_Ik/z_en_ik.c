@@ -53,6 +53,8 @@ void func_80A77EDC(EnIk* this, GlobalContext* globalCtx);
 void func_80A78160(EnIk* this, GlobalContext* globalCtx);
 void func_80A781CC(Actor* thisx, GlobalContext* globalCtx);
 
+void EnIk_UpdateColor(EnIk* this);
+
 extern UNK_TYPE D_02003F80;
 extern AnimationHeader D_06001C28;
 extern AnimationHeader D_06002538;
@@ -738,7 +740,7 @@ void func_80A75FA0(Actor* thisx, GlobalContext* globalCtx) {
     }
 }
 
-Gfx* func_80A761B0(GraphicsContext* gfxCtx, u8 primR, u8 primG, u8 primB, u8 envR, u8 envG, u8 envB) {
+Gfx* func_80A761B0(EnIk* this, GraphicsContext* gfxCtx, u8 primR, u8 primG, u8 primB, u8 envR, u8 envG, u8 envB) {
     Gfx* displayList;
     Gfx* displayListHead;
 
@@ -746,7 +748,7 @@ Gfx* func_80A761B0(GraphicsContext* gfxCtx, u8 primR, u8 primG, u8 primB, u8 env
     displayListHead = displayList;
 
     gDPPipeSync(displayListHead++);
-    gDPSetPrimColor(displayListHead++, 0, 0, primR, primG, primB, 255);
+    gDPSetPrimColor(displayListHead++, 0, 0, this->color.r, this->color.g, this->color.b, this->color.a);
     gDPSetEnvColor(displayListHead++, envR, envG, envB, 255);
     gSPEndDisplayList(displayListHead++);
 
@@ -885,26 +887,29 @@ void func_80A76798(Actor* thisx, GlobalContext* globalCtx) {
     func_80093D84(globalCtx->state.gfxCtx);
 
     if (this->actor.params == 0) {
-        gSPSegment(oGfxCtx->polyOpa.p++, 0x08, func_80A761B0(globalCtx->state.gfxCtx, 245, 225, 155, 30, 30, 0));
-        gSPSegment(oGfxCtx->polyOpa.p++, 0x09, func_80A761B0(globalCtx->state.gfxCtx, 255, 40, 0, 40, 0, 0));
-        gSPSegment(oGfxCtx->polyOpa.p++, 0x0A, func_80A761B0(globalCtx->state.gfxCtx, 255, 255, 255, 20, 40, 30));
+        gSPSegment(oGfxCtx->polyOpa.p++, 0x08, func_80A761B0(this, globalCtx->state.gfxCtx, 245, 225, 155, 30, 30, 0));
+        gSPSegment(oGfxCtx->polyOpa.p++, 0x09, func_80A761B0(this, globalCtx->state.gfxCtx, 255, 40, 0, 40, 0, 0));
+        gSPSegment(oGfxCtx->polyOpa.p++, 0x0A, func_80A761B0(this, globalCtx->state.gfxCtx, 255, 255, 255, 20, 40, 30));
     } else if (this->actor.params == 1) {
-        gSPSegment(oGfxCtx->polyOpa.p++, 0x08, func_80A761B0(globalCtx->state.gfxCtx, 245, 255, 205, 30, 35, 0));
-        gSPSegment(oGfxCtx->polyOpa.p++, 0x09, func_80A761B0(globalCtx->state.gfxCtx, 185, 135, 25, 20, 20, 0));
-        gSPSegment(oGfxCtx->polyOpa.p++, 0x0A, func_80A761B0(globalCtx->state.gfxCtx, 255, 255, 255, 30, 40, 20));
+        gSPSegment(oGfxCtx->polyOpa.p++, 0x08, func_80A761B0(this, globalCtx->state.gfxCtx, 245, 255, 205, 30, 35, 0));
+        gSPSegment(oGfxCtx->polyOpa.p++, 0x09, func_80A761B0(this, globalCtx->state.gfxCtx, 185, 135, 25, 20, 20, 0));
+        gSPSegment(oGfxCtx->polyOpa.p++, 0x0A, func_80A761B0(this, globalCtx->state.gfxCtx, 255, 255, 255, 30, 40, 20));
     } else if (this->actor.params == 2) {
-        gSPSegment(oGfxCtx->polyOpa.p++, 0x08, func_80A761B0(globalCtx->state.gfxCtx, 55, 65, 55, 0, 0, 0));
-        gSPSegment(oGfxCtx->polyOpa.p++, 0x09, func_80A761B0(globalCtx->state.gfxCtx, 205, 165, 75, 25, 20, 0));
-        gSPSegment(oGfxCtx->polyOpa.p++, 0x0A, func_80A761B0(globalCtx->state.gfxCtx, 205, 165, 75, 25, 20, 0));
+        gSPSegment(oGfxCtx->polyOpa.p++, 0x08, func_80A761B0(this, globalCtx->state.gfxCtx, 55, 65, 55, 0, 0, 0));
+        gSPSegment(oGfxCtx->polyOpa.p++, 0x09, func_80A761B0(this, globalCtx->state.gfxCtx, 205, 165, 75, 25, 20, 0));
+        gSPSegment(oGfxCtx->polyOpa.p++, 0x0A, func_80A761B0(this, globalCtx->state.gfxCtx, 205, 165, 75, 25, 20, 0));
     } else {
-        gSPSegment(oGfxCtx->polyOpa.p++, 0x08, func_80A761B0(globalCtx->state.gfxCtx, 255, 255, 255, 180, 180, 180));
-        gSPSegment(oGfxCtx->polyOpa.p++, 0x09, func_80A761B0(globalCtx->state.gfxCtx, 225, 205, 115, 25, 20, 0));
-        gSPSegment(oGfxCtx->polyOpa.p++, 0x0A, func_80A761B0(globalCtx->state.gfxCtx, 225, 205, 115, 25, 20, 0));
+        gSPSegment(oGfxCtx->polyOpa.p++, 0x08,
+                   func_80A761B0(this, globalCtx->state.gfxCtx, 255, 255, 255, 180, 180, 180));
+        gSPSegment(oGfxCtx->polyOpa.p++, 0x09, func_80A761B0(this, globalCtx->state.gfxCtx, 225, 205, 115, 25, 20, 0));
+        gSPSegment(oGfxCtx->polyOpa.p++, 0x0A, func_80A761B0(this, globalCtx->state.gfxCtx, 225, 205, 115, 25, 20, 0));
     }
     SkelAnime_DrawSV(globalCtx, this->skelAnime.skeleton, this->skelAnime.limbDrawTbl, this->skelAnime.dListCount,
                      EnIk_OverrideLimbDraw3, EnIk_PostLimbDraw3, &this->actor);
 
     CLOSE_DISPS(globalCtx->state.gfxCtx, "../z_en_ik_inFight.c", 1351);
+
+    EnIk_UpdateColor(this);
 }
 
 void EnIk_StartMusic(void) {
@@ -1167,9 +1172,9 @@ void func_80A77844(EnIk* this, GlobalContext* globalCtx) {
     func_8002EBCC(&this->actor, globalCtx, 0);
     func_80093D18(gfxCtx);
     func_80093D84(gfxCtx);
-    gSPSegment(oGfxCtx->polyOpa.p++, 0x08, func_80A761B0(gfxCtx, 245, 225, 155, 30, 30, 0));
-    gSPSegment(oGfxCtx->polyOpa.p++, 0x09, func_80A761B0(gfxCtx, 255, 40, 0, 40, 0, 0));
-    gSPSegment(oGfxCtx->polyOpa.p++, 0x0A, func_80A761B0(gfxCtx, 255, 255, 255, 20, 40, 30));
+    gSPSegment(oGfxCtx->polyOpa.p++, 0x08, func_80A761B0(this, gfxCtx, 245, 225, 155, 30, 30, 0));
+    gSPSegment(oGfxCtx->polyOpa.p++, 0x09, func_80A761B0(this, gfxCtx, 255, 40, 0, 40, 0, 0));
+    gSPSegment(oGfxCtx->polyOpa.p++, 0x0A, func_80A761B0(this, gfxCtx, 255, 255, 255, 20, 40, 30));
     SkelAnime_DrawSV(globalCtx, skelAnime->skeleton, skelAnime->limbDrawTbl, skelAnime->dListCount,
                      EnIk_OverrideLimbDraw2, EnIk_PostLimbDraw2, &this->actor);
 
@@ -1321,9 +1326,9 @@ void func_80A77EDC(EnIk* this, GlobalContext* globalCtx) {
     func_8002EBCC(&this->actor, globalCtx, 0);
     func_80093D18(gfxCtx);
     func_80093D84(gfxCtx);
-    gSPSegment(oGfxCtx->polyOpa.p++, 0x08, func_80A761B0(gfxCtx, 245, 225, 155, 30, 30, 0));
-    gSPSegment(oGfxCtx->polyOpa.p++, 0x09, func_80A761B0(gfxCtx, 255, 40, 0, 40, 0, 0));
-    gSPSegment(oGfxCtx->polyOpa.p++, 0x0A, func_80A761B0(gfxCtx, 255, 255, 255, 20, 40, 30));
+    gSPSegment(oGfxCtx->polyOpa.p++, 0x08, func_80A761B0(this, gfxCtx, 245, 225, 155, 30, 30, 0));
+    gSPSegment(oGfxCtx->polyOpa.p++, 0x09, func_80A761B0(this, gfxCtx, 255, 40, 0, 40, 0, 0));
+    gSPSegment(oGfxCtx->polyOpa.p++, 0x0A, func_80A761B0(this, gfxCtx, 255, 255, 255, 20, 40, 30));
     SkelAnime_DrawSV(globalCtx, skelAnime->skeleton, skelAnime->limbDrawTbl, skelAnime->dListCount,
                      EnIk_OverrideLimbDraw1, EnIk_PostLimbDraw1, &this->actor);
 
@@ -1331,6 +1336,57 @@ void func_80A77EDC(EnIk* this, GlobalContext* globalCtx) {
 }
 
 static EnIkDrawFunc sDrawFuncs[] = { func_80A77ED0, func_80A77EDC, func_80A77844 };
+
+void EnIk_UpdateColor(EnIk* this) {
+    EffectBlure* blure;
+    s32 i;
+
+    for (i = 0; i < 6; i++) {
+        if (this->colorState == 0) {
+            this->color.g++;
+            if (this->color.g == 255) {
+                this->colorState = 1;
+            }
+        }
+        if (this->colorState == 1) {
+            this->color.r--;
+            if (this->color.r == 0) {
+                this->colorState = 2;
+            }
+        }
+        if (this->colorState == 2) {
+            this->color.b++;
+            if (this->color.b == 255) {
+                this->colorState = 3;
+            }
+        }
+        if (this->colorState == 3) {
+            this->color.g--;
+            if (this->color.g == 0) {
+                this->colorState = 4;
+            }
+        }
+        if (this->colorState == 4) {
+            this->color.r++;
+            if (this->color.r == 255) {
+                this->colorState = 5;
+            }
+        }
+        if (this->colorState == 5) {
+            this->color.b--;
+            if (this->color.b == 0) {
+                this->colorState = 0;
+            }
+        }
+    }
+
+    blure = Effect_GetByIndex(this->blureIdx);
+    if (blure != NULL) {
+        blure->p1StartColor.r = blure->p2StartColor.r = blure->p1EndColor.r = blure->p2EndColor.r = this->color.r;
+        blure->p1StartColor.g = blure->p2StartColor.g = blure->p1EndColor.g = blure->p2EndColor.g = this->color.g;
+        blure->p1StartColor.b = blure->p2StartColor.b = blure->p1EndColor.b = blure->p2EndColor.b = this->color.b;
+    }
+}
 
 void EnIk_Draw(Actor* thisx, GlobalContext* globalCtx) {
     EnIk* this = THIS;
@@ -1341,6 +1397,7 @@ void EnIk_Draw(Actor* thisx, GlobalContext* globalCtx) {
     }
 
     sDrawFuncs[this->drawMode](this, globalCtx);
+    EnIk_UpdateColor(this);
 }
 
 void func_80A780D0(EnIk* this, GlobalContext* globalCtx) {
@@ -1380,9 +1437,14 @@ void func_80A781CC(Actor* thisx, GlobalContext* globalCtx) {
     }
 }
 
+static Color_RGBA8 startColor = { 255, 0, 0, 255 };
+
 void EnIk_Init(Actor* thisx, GlobalContext* globalCtx) {
     EnIk* this = THIS;
     s32 flag = this->actor.params & 0xFF00;
+
+    this->color = startColor;
+    this->colorState = 0;
 
     if (((this->actor.params & 0xFF) == 0 && (gSaveContext.eventChkInf[3] & 0x1000)) ||
         (flag != 0 && Flags_GetSwitch(globalCtx, flag >> 8))) {

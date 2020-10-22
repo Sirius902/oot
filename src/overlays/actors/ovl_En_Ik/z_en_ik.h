@@ -34,8 +34,9 @@ typedef struct EnIk {
     /* 0x04CC */ s32 drawMode;
     /* 0x04D0 */ u32 npcAction;
     /* 0x04D4 */ s32 unk_4D4;
-    /* 0x04D8 */ char unk_4D8[0x04];
-} EnIk; // size = 0x04DC
+    /* 0x04D8 */ Color_RGBA8 color;
+    /* 0x04DC */ s32 colorState;
+} EnIk; // size = 0x04E0
 
 extern const ActorInit En_Ik_InitVars;
 
