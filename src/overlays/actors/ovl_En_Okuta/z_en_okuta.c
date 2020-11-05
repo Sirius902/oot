@@ -1,5 +1,7 @@
 #include "z_en_okuta.h"
 
+#include "../ovl_En_Bom/z_en_bom.h"
+
 #define FLAGS 0x00000005
 
 #define THIS ((EnOkuta*)thisx)
@@ -220,12 +222,19 @@ void EnOkuta_SpawnProjectile(EnOkuta* this, GlobalContext* globalCtx) {
     Vec3f velocity;
     f32 sin = Math_Sins(this->actor.shape.rot.y);
     f32 cos = Math_Coss(this->actor.shape.rot.y);
+    f32 playerSin = Math_Sins(this->actor.yawTowardsLink);
+    f32 playerCos = Math_Coss(this->actor.yawTowardsLink);
+    EnBom* bomb;
 
-    pos.x = this->actor.posRot.pos.x + (25.0f * sin);
+    pos.x = this->actor.posRot.pos.x + (25.0f * sin) + (10.0f * playerSin);
     pos.y = this->actor.posRot.pos.y - 6.0f;
-    pos.z = this->actor.posRot.pos.z + (25.0f * cos);
-    if (Actor_Spawn(&globalCtx->actorCtx, globalCtx, ACTOR_EN_OKUTA, pos.x, pos.y, pos.z, this->actor.shape.rot.x,
-                    this->actor.shape.rot.y, this->actor.shape.rot.z, 0x10) != NULL) {
+    pos.z = this->actor.posRot.pos.z + (25.0f * cos) + (10.0f * playerCos);
+    bomb = (EnBom*)Actor_Spawn(&globalCtx->actorCtx, globalCtx, ACTOR_EN_BOM, pos.x, pos.y, pos.z, this->actor.shape.rot.x,
+                    this->actor.shape.rot.y, this->actor.shape.rot.z, 0);
+    if (bomb != NULL) {
+        bomb->actor.velocity.y = -bomb->actor.gravity + (this->actor.xzDistFromLink / 100);
+        bomb->actor.speedXZ = (-0.08f * 20 / 2) + (this->actor.xzDistFromLink / 20);
+
         pos.x = this->actor.posRot.pos.x + (40.0f * sin);
         pos.z = this->actor.posRot.pos.z + (40.0f * cos);
         pos.y = this->actor.posRot.pos.y;
