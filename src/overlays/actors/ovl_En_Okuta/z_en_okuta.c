@@ -229,8 +229,8 @@ void EnOkuta_SpawnProjectile(EnOkuta* this, GlobalContext* globalCtx) {
     pos.x = this->actor.posRot.pos.x + (25.0f * sin) + (10.0f * playerSin);
     pos.y = this->actor.posRot.pos.y - 6.0f;
     pos.z = this->actor.posRot.pos.z + (25.0f * cos) + (10.0f * playerCos);
-    bomb = (EnBom*)Actor_Spawn(&globalCtx->actorCtx, globalCtx, ACTOR_EN_BOM, pos.x, pos.y, pos.z, this->actor.shape.rot.x,
-                    this->actor.shape.rot.y, this->actor.shape.rot.z, 0);
+    bomb = (EnBom*)Actor_Spawn(&globalCtx->actorCtx, globalCtx, ACTOR_EN_BOM, pos.x, pos.y, pos.z,
+                               this->actor.shape.rot.x, this->actor.shape.rot.y, this->actor.shape.rot.z, 0);
     if (bomb != NULL) {
         bomb->actor.velocity.y = -bomb->actor.gravity + (this->actor.xzDistFromLink / 100);
         bomb->actor.speedXZ = (-0.08f * 20 / 2) + (this->actor.xzDistFromLink / 20);
