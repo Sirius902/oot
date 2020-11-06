@@ -234,7 +234,7 @@ void EnOkuta_SpawnProjectile(EnOkuta* this, GlobalContext* globalCtx) {
                                this->actor.shape.rot.x, this->actor.shape.rot.y, this->actor.shape.rot.z, 0);
     if (bomb != NULL) {
         f32 xzDistFromLink = Math_Vec3f_DistXZ(&bomb->actor.posRot.pos, &player->actor.posRot.pos);
-        bomb->actor.velocity.y = -bomb->actor.gravity + (xzDistFromLink / 100);
+        bomb->actor.velocity.y = -bomb->actor.gravity + sqrtf(sqrtf(xzDistFromLink));
         bomb->actor.speedXZ = (-0.08f * 20 / 2) + (xzDistFromLink / 20);
 
         pos.x = this->actor.posRot.pos.x + (40.0f * sin);
