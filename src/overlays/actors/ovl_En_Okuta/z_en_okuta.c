@@ -218,6 +218,7 @@ void EnOkuta_SetupFreeze(EnOkuta* this) {
 }
 
 void EnOkuta_SpawnProjectile(EnOkuta* this, GlobalContext* globalCtx) {
+    Player* player = PLAYER;
     Vec3f pos;
     Vec3f velocity;
     f32 sin = Math_Sins(this->actor.shape.rot.y);
@@ -232,8 +233,9 @@ void EnOkuta_SpawnProjectile(EnOkuta* this, GlobalContext* globalCtx) {
     bomb = (EnBom*)Actor_Spawn(&globalCtx->actorCtx, globalCtx, ACTOR_EN_BOM, pos.x, pos.y, pos.z,
                                this->actor.shape.rot.x, this->actor.shape.rot.y, this->actor.shape.rot.z, 0);
     if (bomb != NULL) {
-        bomb->actor.velocity.y = -bomb->actor.gravity + (bomb->actor.xzDistFromLink / 100);
-        bomb->actor.speedXZ = (-0.08f * 20 / 2) + (bomb->actor.xzDistFromLink / 20);
+        f32 xzDistFromLink = Math_Vec3f_DistXZ(&bomb->actor.posRot.pos, &player->actor.posRot.pos);
+        bomb->actor.velocity.y = -bomb->actor.gravity + (xzDistFromLink / 100);
+        bomb->actor.speedXZ = (-0.08f * 20 / 2) + (xzDistFromLink / 20);
 
         pos.x = this->actor.posRot.pos.x + (40.0f * sin);
         pos.z = this->actor.posRot.pos.z + (40.0f * cos);
