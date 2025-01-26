@@ -1,7 +1,7 @@
 MAKEFLAGS += --no-builtin-rules
 
 # Ensure the build fails if a piped command fails
-SHELL = /bin/bash
+SHELL = /usr/bin/env bash
 .SHELLFLAGS = -o pipefail -c
 
 #### Build options ####
@@ -263,8 +263,11 @@ ifeq ($(COMPILER),gcc)
   CC       := $(MIPS_BINUTILS_PREFIX)gcc
   CCAS     := $(CC) -x assembler-with-cpp
 else ifeq ($(COMPILER),ido)
-  CC       := tools/ido_recomp/$(DETECTED_OS)/7.1/cc
-  CC_OLD   := tools/ido_recomp/$(DETECTED_OS)/5.3/cc
+  CC       := $(CC_IDO)
+  CC_OLD   := $(CC_OLD_IDO)
+
+  CC       ?= tools/ido_recomp/$(DETECTED_OS)/7.1/cc
+  CC_OLD   ?= tools/ido_recomp/$(DETECTED_OS)/5.3/cc
   CCAS     := $(CC_OLD)
 else
 $(error Unsupported compiler. Please use either ido or gcc as the COMPILER variable.)

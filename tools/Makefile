@@ -34,7 +34,10 @@ ifneq ($(LLD),0)
   CFLAGS += -fuse-ld=lld
 endif
 
-all: $(PROGRAMS) $(IDO_RECOMP_5_3_DIR) $(IDO_RECOMP_7_1_DIR) $(EGCS_DIR)
+ifndef NO_CURL
+all: $(IDO_RECOMP_5_3_DIR) $(IDO_RECOMP_7_1_DIR) $(EGCS_DIR)
+endif
+all: $(PROGRAMS)
 	$(MAKE) -C ZAPD
 	$(MAKE) -C fado
 	$(MAKE) -C audio
